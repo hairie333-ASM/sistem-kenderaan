@@ -916,4 +916,36 @@ class VehicleManagementSystemTest extends TestCase
         $response->assertSee('Jadual Perjalanan');
         $response->assertSee('Senarai Permohonan Saya');
     }
+
+    /** Test Scenario 26: Driver can view assigned request details (Butiran) without 500 error */
+    public function test_scenario_26_driver_can_view_assigned_request_details(): void
+    {
+        $req = VehicleRequest::create([
+            'request_number' => 'REQ-TEST-DRIVER-SHOW',
+            'user_id' => $this->applicant->id,
+            'applicant_name' => $this->applicant->name,
+            'applicant_position' => 'Pegawai Kanan',
+            'applicant_phone' => '012-3456789',
+            'applicant_email' => $this->applicant->email,
+            'start_date' => '2026-10-04',
+            'start_time' => '08:00:00',
+            'end_date' => '2026-10-04',
+            'end_time' => '17:00:00',
+            'origin' => 'Klang Sentral',
+            'destination' => 'Pusat Latihan Komuniti (PLK) Meru, Klang',
+            'purpose' => 'NSC Logistics & Outreach: Pengangkutan Pasukan Outreach & Modul Sains',
+            'need_driver' => true,
+            'status' => 'assigned',
+            'assigned_driver_id' => $this->driver->id,
+            'assigned_vehicle_id' => $this->accord->id,
+            'assigned_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->driverUser)->get(route('requests.show', $req->id));
+        $response->assertOk();
+        $response->assertSee('REQ-TEST-DRIVER-SHOW');
+        $response->assertSee('Pusat Latihan Komuniti (PLK) Meru, Klang');
+        $response->assertSee($this->accord->plate_number);
+        $response->assertSee('Saya Telah Terima Tugasan');
+    }
 }

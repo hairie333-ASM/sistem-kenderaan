@@ -20,15 +20,15 @@ services:
         value: ms
       - key: APP_FALLBACK_LOCALE
         value: en
+      - key: LOG_CHANNEL
+        value: stderr
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_SSLMODE
         value: require
       - key: DATABASE_URL
         sync: false
-      - key: APP_KEY
-        generateValue: true
       - key: SESSION_DRIVER
-        value: database
+        value: cookie
       - key: RUN_SEEDER
         value: "true"

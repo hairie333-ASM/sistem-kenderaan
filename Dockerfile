@@ -1,18 +1,21 @@
 FROM php:8.4-fpm-alpine
 
-# Install system dependencies, PostgreSQL client libraries, and Nginx/Supervisor
+# Install system dependencies, root certificates, PostgreSQL client libraries, and Nginx/Supervisor
 RUN apk update && apk add --no-cache \
     bash \
     curl \
+    ca-certificates \
     nginx \
     supervisor \
+    postgresql-client \
     postgresql-dev \
     libzip-dev \
     icu-dev \
     libpng-dev \
     libjpeg-turbo-dev \
     freetype-dev \
-    oniguruma-dev
+    oniguruma-dev \
+    && update-ca-certificates
 
 # Install required PHP extensions for Laravel & PostgreSQL
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -52,8 +55,9 @@ COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Ensure entrypoint is executable and directory permissions are correct
 RUN chmod +x /usr/local/bin/entrypoint.sh \
-    && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+    && mkdir -p /var/www/html/database \
+    && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
 
 # Expose default port (Render will override with $PORT)
 EXPOSE 8080

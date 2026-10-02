@@ -16,7 +16,57 @@ use App\Http\Controllers\UpfAssignmentController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\VehicleRequestController;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+
+// Diagnostics & Status
+Route::get('/status', function () {
+    $status = [
+        'app' => [
+            'name' => config('app.name'),
+            'env' => config('app.env'),
+            'debug' => config('app.debug'),
+            'has_app_key' => ! empty(config('app.key')),
+            'key_length' => strlen((string) config('app.key')),
+            'encrypter_ok' => false,
+        ],
+        'database' => [
+            'default' => config('database.default'),
+            'has_database_url' => ! empty(env('DATABASE_URL')),
+            'connected' => false,
+            'tables_count' => 0,
+            'users_count' => 0,
+            'error' => null,
+        ],
+    ];
+
+    try {
+        app('encrypter');
+        $status['app']['encrypter_ok'] = true;
+    } catch (Throwable $e) {
+        $status['app']['encrypter_error'] = $e->getMessage();
+    }
+
+    try {
+        DB::connection()->getPdo();
+        $status['database']['connected'] = true;
+        $driver = config('database.default');
+        if ($driver === 'pgsql') {
+            $tables = DB::select("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
+        } else {
+            $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table'");
+        }
+        $status['database']['tables_count'] = count($tables);
+        $status['database']['users_count'] = User::count();
+    } catch (Throwable $e) {
+        $status['database']['error'] = $e->getMessage();
+    }
+
+    $allOk = $status['app']['encrypter_ok'] && $status['database']['connected'];
+
+    return response()->json($status, $allOk ? 200 : 503);
+});
 
 // Guest Authentication
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');

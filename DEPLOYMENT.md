@@ -166,3 +166,37 @@ Kata laluan lalai untuk semua akaun di bawah adalah: **`password`**
    - Render akan mengesan commit baharu dan melakukan auto-deploy tanpa sebarang tindakan manual tambahan.
 3. **Matikan `RUN_SEEDER` Selepas Boot Pertama (Pilihan)**:
    - Selepas deployment pertama berjaya dan data awal telah dimasukkan, anda boleh menukar nilai `RUN_SEEDER` kepada `false` di Render Environment Variables untuk mempercepatkan masa boot jika aplikasi restart.
+
+---
+
+## 🔍 Penyelesaian Ralat: "500 | Server Error"
+
+Sekiranya pelayar web memaparkan skrin **500 | Server Error**, berikut adalah punca lazim dan langkah penyelesaiannya:
+
+### 1. `APP_KEY` Hilang atau Format Tidak Sah
+- **Punca**: Laravel memerlukan kunci penyulitan 32-bait yang sah (bermula dengan `base64:`). Jika menggunakan ciri penjanaan automatik Render, Render kadangkala menjana rentetan rawak yang tidak sepadan dengan saiz cipher AES-256 Laravel, menyebabkan kegagalan sesi.
+- **Penyelesaian**:
+  1. Buka Render Web Service anda -> Tab **Environment**.
+  2. Cari pembolehubah `APP_KEY`. Jika tiada atau tidak bermula dengan `base64:`, masukkan kunci ini:
+     ```text
+     base64:gY8ctdjBdxS/Nwbq/ziNTru4njn88CJxTCFOyW6ZAnw=
+     ```
+     *(Atau jana kunci baru di komputer anda dengan `php artisan key:generate --show`)*.
+  3. Klik **Save Changes**. Render akan memulakan semula web service secara automatik.
+
+### 2. `DATABASE_URL` Belum Dimasukkan
+- **Punca**: Render Web Service cuba menyambung ke Neon Postgres, tetapi pembolehubah `DATABASE_URL` kosong atau tertinggal.
+- **Penyelesaian**:
+  1. Dapatkan connection string daripada dashboard [Neon.tech](https://neon.tech):
+     `postgresql://neondb_owner:***@ep-***.ap-southeast-1.aws.neon.tech/neondb?sslmode=require`
+  2. Masukkan ke dalam Render Environment Variables sebagai `DATABASE_URL`.
+  3. Pastikan `DB_SSLMODE` ditetapkan kepada `require`.
+
+### 3. Semak Status Diagnostik Pantas
+Aplikasi ini kini dilengkapi dengan endpoint diagnostik khas:
+- Buka di pelayar web: **`https://sistem-kenderaan-asm.onrender.com/status`**
+- Halaman ini akan memaparkan JSON yang memberitahu secara terperinci sama ada:
+  - `encrypter_ok`: status kunci aplikasi `APP_KEY`
+  - `connected`: status sambungan ke pangkalan data
+  - `tables_count`: bilangan jadual yang telah berjaya dimigrasi
+  - `error`: mesej ralat sebenar jika sambungan gagal.

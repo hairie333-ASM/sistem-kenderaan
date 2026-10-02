@@ -49,6 +49,21 @@
                 </div>
             @endif
 
+            @if(isset($dbConnected) && !$dbConnected)
+                <div class="mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs">
+                    <div class="font-bold flex items-center mb-1 text-amber-800">
+                        <i class="fa-solid fa-triangle-exclamation mr-1.5 text-amber-600"></i>
+                        Pangkalan Data Belum Sedia / Sedang Dimigrasi
+                    </div>
+                    <div class="text-[11px] text-amber-700 font-mono break-all mb-1.5">
+                        {{ $dbError }}
+                    </div>
+                    <div class="text-[10px] text-slate-600">
+                        Sila pastikan <strong>DATABASE_URL</strong> Neon PostgreSQL telah dimasukkan dengan betul di tetapan Environment Variables Render.
+                    </div>
+                </div>
+            @endif
+
             @if($errors->any())
                 <div class="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start">
                     <i class="fa-solid fa-circle-exclamation mr-2 text-rose-600 mt-0.5"></i>

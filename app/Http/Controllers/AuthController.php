@@ -17,9 +17,17 @@ class AuthController extends Controller
             return redirect()->route('dashboard');
         }
 
-        $demoUsers = User::with('driver')->orderBy('role')->get();
+        try {
+            $demoUsers = User::with('driver')->orderBy('role')->get();
+            $dbConnected = true;
+            $dbError = null;
+        } catch (\Throwable $e) {
+            $demoUsers = collect();
+            $dbConnected = false;
+            $dbError = $e->getMessage();
+        }
 
-        return view('auth.login', compact('demoUsers'));
+        return view('auth.login', compact('demoUsers', 'dbConnected', 'dbError'));
     }
 
     public function login(Request $request): RedirectResponse

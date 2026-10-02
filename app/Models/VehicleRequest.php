@@ -157,17 +157,27 @@ class VehicleRequest extends Model
             return null;
         }
 
-        $start = Carbon::parse("{$this->start_date->format('Y-m-d')} {$this->start_time}");
-        $end = Carbon::parse("{$this->end_date->format('Y-m-d')} {$this->end_time}");
+        $startDateStr = $this->start_date instanceof Carbon ? $this->start_date->format('Y-m-d') : substr((string) $this->start_date, 0, 10);
+        $endDateStr = $this->end_date instanceof Carbon ? $this->end_date->format('Y-m-d') : substr((string) $this->end_date, 0, 10);
 
-        return self::where('assigned_driver_id', $dId)
+        $start = Carbon::parse("{$startDateStr} {$this->start_time}");
+        $end = Carbon::parse("{$endDateStr} {$this->end_time}");
+
+        $candidates = self::where('assigned_driver_id', $dId)
             ->where('id', '!=', $this->id)
             ->whereNotIn('status', ['cancelled', 'rejected', 'completed', 'draft'])
-            ->where(function ($q) use ($start, $end) {
-                $q->whereRaw("datetime(substr(start_date, 1, 10) || ' ' || substr(start_time, 1, 5) || ':00') < ?", [$end->format('Y-m-d H:i:s')])
-                    ->whereRaw("datetime(substr(end_date, 1, 10) || ' ' || substr(end_time, 1, 5) || ':00') > ?", [$start->format('Y-m-d H:i:s')]);
-            })
-            ->first();
+            ->where('start_date', '<=', $endDateStr.' 23:59:59')
+            ->where('end_date', '>=', $startDateStr.' 00:00:00')
+            ->get();
+
+        return $candidates->first(function ($c) use ($start, $end) {
+            $cStartDateStr = $c->start_date instanceof Carbon ? $c->start_date->format('Y-m-d') : substr((string) $c->start_date, 0, 10);
+            $cEndDateStr = $c->end_date instanceof Carbon ? $c->end_date->format('Y-m-d') : substr((string) $c->end_date, 0, 10);
+            $cStart = Carbon::parse("{$cStartDateStr} {$c->start_time}");
+            $cEnd = Carbon::parse("{$cEndDateStr} {$c->end_time}");
+
+            return $cStart < $end && $cEnd > $start;
+        });
     }
 
     /**
@@ -180,16 +190,26 @@ class VehicleRequest extends Model
             return null;
         }
 
-        $start = Carbon::parse("{$this->start_date->format('Y-m-d')} {$this->start_time}");
-        $end = Carbon::parse("{$this->end_date->format('Y-m-d')} {$this->end_time}");
+        $startDateStr = $this->start_date instanceof Carbon ? $this->start_date->format('Y-m-d') : substr((string) $this->start_date, 0, 10);
+        $endDateStr = $this->end_date instanceof Carbon ? $this->end_date->format('Y-m-d') : substr((string) $this->end_date, 0, 10);
 
-        return self::where('assigned_vehicle_id', $vId)
+        $start = Carbon::parse("{$startDateStr} {$this->start_time}");
+        $end = Carbon::parse("{$endDateStr} {$this->end_time}");
+
+        $candidates = self::where('assigned_vehicle_id', $vId)
             ->where('id', '!=', $this->id)
             ->whereNotIn('status', ['cancelled', 'rejected', 'completed', 'draft'])
-            ->where(function ($q) use ($start, $end) {
-                $q->whereRaw("datetime(substr(start_date, 1, 10) || ' ' || substr(start_time, 1, 5) || ':00') < ?", [$end->format('Y-m-d H:i:s')])
-                    ->whereRaw("datetime(substr(end_date, 1, 10) || ' ' || substr(end_time, 1, 5) || ':00') > ?", [$start->format('Y-m-d H:i:s')]);
-            })
-            ->first();
+            ->where('start_date', '<=', $endDateStr.' 23:59:59')
+            ->where('end_date', '>=', $startDateStr.' 00:00:00')
+            ->get();
+
+        return $candidates->first(function ($c) use ($start, $end) {
+            $cStartDateStr = $c->start_date instanceof Carbon ? $c->start_date->format('Y-m-d') : substr((string) $c->start_date, 0, 10);
+            $cEndDateStr = $c->end_date instanceof Carbon ? $c->end_date->format('Y-m-d') : substr((string) $c->end_date, 0, 10);
+            $cStart = Carbon::parse("{$cStartDateStr} {$c->start_time}");
+            $cEnd = Carbon::parse("{$cEndDateStr} {$c->end_time}");
+
+            return $cStart < $end && $cEnd > $start;
+        });
     }
 }

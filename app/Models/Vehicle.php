@@ -95,17 +95,27 @@ class Vehicle extends Model
      */
     public function getConflict($startDate, $startTime, $endDate, $endTime, $excludeRequestId = null): ?VehicleRequest
     {
-        $start = Carbon::parse("{$startDate} {$startTime}");
-        $end = Carbon::parse("{$endDate} {$endTime}");
+        $startDateStr = $startDate instanceof Carbon ? $startDate->format('Y-m-d') : substr((string) $startDate, 0, 10);
+        $endDateStr = $endDate instanceof Carbon ? $endDate->format('Y-m-d') : substr((string) $endDate, 0, 10);
 
-        return VehicleRequest::where('assigned_vehicle_id', $this->id)
+        $start = Carbon::parse("{$startDateStr} {$startTime}");
+        $end = Carbon::parse("{$endDateStr} {$endTime}");
+
+        $candidates = VehicleRequest::where('assigned_vehicle_id', $this->id)
             ->whereNotIn('status', ['cancelled', 'rejected', 'completed', 'draft'])
             ->when($excludeRequestId, fn ($q) => $q->where('id', '!=', $excludeRequestId))
-            ->where(function ($q) use ($start, $end) {
-                $q->whereRaw("datetime(substr(start_date, 1, 10) || ' ' || substr(start_time, 1, 5) || ':00') < ?", [$end->format('Y-m-d H:i:s')])
-                    ->whereRaw("datetime(substr(end_date, 1, 10) || ' ' || substr(end_time, 1, 5) || ':00') > ?", [$start->format('Y-m-d H:i:s')]);
-            })
-            ->first();
+            ->where('start_date', '<=', $endDateStr.' 23:59:59')
+            ->where('end_date', '>=', $startDateStr.' 00:00:00')
+            ->get();
+
+        return $candidates->first(function ($c) use ($start, $end) {
+            $cStartDateStr = $c->start_date instanceof Carbon ? $c->start_date->format('Y-m-d') : substr((string) $c->start_date, 0, 10);
+            $cEndDateStr = $c->end_date instanceof Carbon ? $c->end_date->format('Y-m-d') : substr((string) $c->end_date, 0, 10);
+            $cStart = Carbon::parse("{$cStartDateStr} {$c->start_time}");
+            $cEnd = Carbon::parse("{$cEndDateStr} {$c->end_time}");
+
+            return $cStart < $end && $cEnd > $start;
+        });
     }
 
     public function isAvailableOn($startDate, $startTime, $endDate, $endTime, $excludeRequestId = null): bool
