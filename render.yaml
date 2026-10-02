@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: sistem-kenderaan-asm
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /up
+    envVars:
+      - key: APP_NAME
+        value: "Sistem Pengurusan Kenderaan & Pemandu - UPF"
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_TIMEZONE
+        value: Asia/Kuala_Lumpur
+      - key: APP_LOCALE
+        value: ms
+      - key: APP_FALLBACK_LOCALE
+        value: en
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_SSLMODE
+        value: require
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_KEY
+        generateValue: true
+      - key: SESSION_DRIVER
+        value: database
+      - key: RUN_SEEDER
+        value: "true"
