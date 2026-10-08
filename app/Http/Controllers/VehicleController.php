@@ -33,6 +33,21 @@ class VehicleController extends Controller
             });
         }
 
+        if ($request->filled('alert')) {
+            match ($request->alert) {
+                'expired' => $query->expiredAlerts(),
+                'expiring' => $query->expiringAlerts(),
+                'roadtax' => $query->where(function ($q) {
+                    $q->roadtaxExpired()->orWhere(fn ($sub) => $sub->roadtaxExpiring());
+                }),
+                'insurance' => $query->where(function ($q) {
+                    $q->insuranceExpired()->orWhere(fn ($sub) => $sub->insuranceExpiring());
+                }),
+                'all', 'needs_attention' => $query->needsAttention(),
+                default => null,
+            };
+        }
+
         $vehicles = $query->orderBy('brand')->paginate(12)->withQueryString();
 
         $stats = [
@@ -42,6 +57,13 @@ class VehicleController extends Controller
             'in_use' => Vehicle::where('status', 'In Use')->count(),
             'maintenance' => Vehicle::where('status', 'Maintenance')->count(),
             'out_of_service' => Vehicle::where('status', 'Out of Service')->count(),
+            'alerts_total' => Vehicle::needsAttention()->count(),
+            'alerts_expired' => Vehicle::expiredAlerts()->count(),
+            'alerts_expiring' => Vehicle::expiringAlerts()->count(),
+            'roadtax_expired' => Vehicle::roadtaxExpired()->count(),
+            'roadtax_expiring' => Vehicle::roadtaxExpiring()->count(),
+            'insurance_expired' => Vehicle::insuranceExpired()->count(),
+            'insurance_expiring' => Vehicle::insuranceExpiring()->count(),
         ];
 
         return view('vehicles.index', compact('vehicles', 'stats'));

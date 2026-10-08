@@ -948,4 +948,58 @@ class VehicleManagementSystemTest extends TestCase
         $response->assertSee($this->accord->plate_number);
         $response->assertSee('Saya Telah Terima Tugasan');
     }
+
+    /** Test Scenario 27: Vehicle roadtax & insurance expiry alerts, badges, filters, and dashboard */
+    public function test_scenario_27_vehicle_expiry_alerts_and_filters(): void
+    {
+        $this->accord->update([
+            'roadtax_expiry' => Carbon::today()->subDays(12),
+            'insurance_expiry' => Carbon::today()->subDays(12),
+        ]);
+
+        $this->crv->update([
+            'roadtax_expiry' => Carbon::today()->addDays(5),
+            'insurance_expiry' => Carbon::today()->addDays(5),
+        ]);
+
+        // 1. Vehicle Index page shows alert banner and alerts
+        $indexResponse = $this->actingAs($this->upf)->get(route('vehicles.index'));
+        $indexResponse->assertOk();
+        $indexResponse->assertSee('PERINGATAN PEMBAHARUAN CUKAI JALAN');
+        $indexResponse->assertSee('1 Tamat Tempoh');
+        $indexResponse->assertSee('1 Hampir Tamat');
+        $indexResponse->assertSee($this->accord->plate_number);
+        $indexResponse->assertSee($this->crv->plate_number);
+
+        // 2. Filter by alert=expired
+        $expiredResponse = $this->actingAs($this->upf)->get(route('vehicles.index', ['alert' => 'expired']));
+        $expiredResponse->assertOk();
+        $expiredResponse->assertSee($this->accord->plate_number);
+        $expiredResponse->assertDontSee($this->crv->plate_number);
+
+        // 3. Filter by alert=expiring
+        $expiringResponse = $this->actingAs($this->upf)->get(route('vehicles.index', ['alert' => 'expiring']));
+        $expiringResponse->assertOk();
+        $expiringResponse->assertSee($this->crv->plate_number);
+        $expiringResponse->assertDontSee($this->accord->plate_number);
+
+        // 4. Vehicle Show page for expired vehicle
+        $showExpiredResponse = $this->actingAs($this->upf)->get(route('vehicles.show', $this->accord->id));
+        $showExpiredResponse->assertOk();
+        $showExpiredResponse->assertSee('AMARAN: DOKUMEN KENDERAAN TELAH TAMAT TEMPOH');
+        $showExpiredResponse->assertSee('Tamat 12 hari lalu');
+
+        // 5. Vehicle Show page for expiring vehicle
+        $showExpiringResponse = $this->actingAs($this->upf)->get(route('vehicles.show', $this->crv->id));
+        $showExpiringResponse->assertOk();
+        $showExpiringResponse->assertSee('PERINGATAN: DOKUMEN KENDERAAN HAMPIR TAMAT TEMPOH');
+        $showExpiringResponse->assertSee('Baki 5 hari lagi');
+
+        // 6. UPF Dashboard displays alert banner and vehicle list
+        $dashResponse = $this->actingAs($this->upf)->get(route('dashboard'));
+        $dashResponse->assertOk();
+        $dashResponse->assertSee('PERINGATAN KENDERAAN: CUKAI JALAN');
+        $dashResponse->assertSee($this->accord->plate_number);
+        $dashResponse->assertSee($this->crv->plate_number);
+    }
 }

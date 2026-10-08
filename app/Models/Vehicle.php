@@ -91,6 +91,203 @@ class Vehicle extends Model
     }
 
     /**
+     * Compute expiry status array for any date
+     */
+    protected function computeExpiryStatus(?Carbon $date): array
+    {
+        if (! $date) {
+            return [
+                'status' => 'none',
+                'label' => 'Tiada Rekod',
+                'days' => null,
+                'days_text' => 'Tiada rekod',
+                'badge_class' => 'bg-slate-100 text-slate-600 border-slate-200',
+                'text_class' => 'text-slate-500',
+                'is_expired' => false,
+                'is_expiring' => false,
+                'is_valid' => false,
+            ];
+        }
+
+        $today = Carbon::today();
+        $expiry = $date->copy()->startOfDay();
+        $days = (int) $today->diffInDays($expiry, false);
+
+        if ($days < 0) {
+            $abs = abs($days);
+
+            return [
+                'status' => 'expired',
+                'label' => 'Tamat Tempoh',
+                'days' => $days,
+                'days_text' => "Tamat {$abs} hari lalu",
+                'badge_class' => 'bg-rose-100 text-rose-800 border-rose-300',
+                'text_class' => 'text-rose-600',
+                'is_expired' => true,
+                'is_expiring' => false,
+                'is_valid' => false,
+            ];
+        }
+
+        if ($days <= 30) {
+            $daysText = $days === 0 ? 'Tamat hari ini' : "Baki {$days} hari lagi";
+
+            return [
+                'status' => 'expiring',
+                'label' => 'Hampir Tamat',
+                'days' => $days,
+                'days_text' => $daysText,
+                'badge_class' => 'bg-amber-100 text-amber-800 border-amber-300',
+                'text_class' => 'text-amber-600',
+                'is_expired' => false,
+                'is_expiring' => true,
+                'is_valid' => false,
+            ];
+        }
+
+        return [
+            'status' => 'valid',
+            'label' => 'Sah / Aktif',
+            'days' => $days,
+            'days_text' => "Baki {$days} hari lagi",
+            'badge_class' => 'bg-emerald-100 text-emerald-800 border-emerald-300',
+            'text_class' => 'text-emerald-600',
+            'is_expired' => false,
+            'is_expiring' => false,
+            'is_valid' => true,
+        ];
+    }
+
+    public function getRoadtaxStatusAttribute(): array
+    {
+        return $this->computeExpiryStatus($this->roadtax_expiry);
+    }
+
+    public function getInsuranceStatusAttribute(): array
+    {
+        return $this->computeExpiryStatus($this->insurance_expiry);
+    }
+
+    public function getAlertLevelAttribute(): ?string
+    {
+        $rt = $this->roadtax_status;
+        $ins = $this->insurance_status;
+
+        if ($rt['status'] === 'expired' || $ins['status'] === 'expired') {
+            return 'expired';
+        }
+
+        if ($rt['status'] === 'expiring' || $ins['status'] === 'expiring') {
+            return 'expiring';
+        }
+
+        return null;
+    }
+
+    public function getAlertBadgeAttribute(): ?array
+    {
+        $level = $this->alert_level;
+
+        if ($level === 'expired') {
+            return [
+                'level' => 'expired',
+                'class' => 'bg-rose-100 text-rose-800 border-rose-300',
+                'bar_class' => 'bg-rose-600 text-white',
+                'border_class' => 'border-rose-400 ring-2 ring-rose-200',
+                'icon' => 'fa-solid fa-triangle-exclamation',
+                'label' => 'Tamat Tempoh',
+            ];
+        }
+
+        if ($level === 'expiring') {
+            return [
+                'level' => 'expiring',
+                'class' => 'bg-amber-100 text-amber-800 border-amber-300',
+                'bar_class' => 'bg-amber-500 text-slate-900',
+                'border_class' => 'border-amber-400 ring-2 ring-amber-200',
+                'icon' => 'fa-solid fa-clock-rotate-left',
+                'label' => 'Hampir Tamat',
+            ];
+        }
+
+        return null;
+    }
+
+    public function hasAlert(): bool
+    {
+        return $this->alert_level !== null;
+    }
+
+    // Query Scopes
+    public function scopeRoadtaxExpired($query)
+    {
+        return $query->whereNotNull('roadtax_expiry')->where('roadtax_expiry', '<', Carbon::today());
+    }
+
+    public function scopeRoadtaxExpiring($query, int $days = 30)
+    {
+        return $query->whereNotNull('roadtax_expiry')
+            ->whereBetween('roadtax_expiry', [Carbon::today(), Carbon::today()->addDays($days)]);
+    }
+
+    public function scopeInsuranceExpired($query)
+    {
+        return $query->whereNotNull('insurance_expiry')->where('insurance_expiry', '<', Carbon::today());
+    }
+
+    public function scopeInsuranceExpiring($query, int $days = 30)
+    {
+        return $query->whereNotNull('insurance_expiry')
+            ->whereBetween('insurance_expiry', [Carbon::today(), Carbon::today()->addDays($days)]);
+    }
+
+    public function scopeExpiredAlerts($query)
+    {
+        $today = Carbon::today();
+
+        return $query->where(function ($q) use ($today) {
+            $q->where(function ($sub) use ($today) {
+                $sub->whereNotNull('roadtax_expiry')->where('roadtax_expiry', '<', $today);
+            })->orWhere(function ($sub) use ($today) {
+                $sub->whereNotNull('insurance_expiry')->where('insurance_expiry', '<', $today);
+            });
+        });
+    }
+
+    public function scopeExpiringAlerts($query, int $days = 30)
+    {
+        $today = Carbon::today();
+        $future = Carbon::today()->addDays($days);
+
+        return $query->where(function ($q) use ($today, $future) {
+            $q->where(function ($sub) use ($today, $future) {
+                $sub->whereBetween('roadtax_expiry', [$today, $future])
+                    ->where(function ($rtCheck) use ($today) {
+                        $rtCheck->whereNull('insurance_expiry')->orWhere('insurance_expiry', '>=', $today);
+                    });
+            })->orWhere(function ($sub) use ($today, $future) {
+                $sub->whereBetween('insurance_expiry', [$today, $future])
+                    ->where(function ($insCheck) use ($today) {
+                        $insCheck->whereNull('roadtax_expiry')->orWhere('roadtax_expiry', '>=', $today);
+                    });
+            });
+        });
+    }
+
+    public function scopeNeedsAttention($query, int $days = 30)
+    {
+        $future = Carbon::today()->addDays($days);
+
+        return $query->where(function ($q) use ($future) {
+            $q->where(function ($sub) use ($future) {
+                $sub->whereNotNull('roadtax_expiry')->where('roadtax_expiry', '<=', $future);
+            })->orWhere(function ($sub) use ($future) {
+                $sub->whereNotNull('insurance_expiry')->where('insurance_expiry', '<=', $future);
+            });
+        });
+    }
+
+    /**
      * Check if vehicle has conflict for a specific window
      */
     public function getConflict($startDate, $startTime, $endDate, $endTime, $excludeRequestId = null): ?VehicleRequest

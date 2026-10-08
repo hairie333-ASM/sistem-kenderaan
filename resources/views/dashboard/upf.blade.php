@@ -102,6 +102,45 @@
         </div>
     </div>
 
+    <!-- Expiry Alert Banner on UPF Dashboard -->
+    @if($alertVehiclesCount > 0)
+        <div class="p-4 rounded-2xl border {{ $expiredVehiclesCount > 0 ? 'bg-rose-50/90 border-rose-300' : 'bg-amber-50/90 border-amber-300' }} shadow-sm">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-xl {{ $expiredVehiclesCount > 0 ? 'bg-rose-600 text-white' : 'bg-amber-500 text-slate-900' }} flex items-center justify-center shrink-0 text-lg shadow-sm">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h2 class="text-sm font-black {{ $expiredVehiclesCount > 0 ? 'text-rose-900' : 'text-amber-900' }}">
+                                PERINGATAN KENDERAAN: CUKAI JALAN & INSURANS
+                            </h2>
+                            @if($expiredVehiclesCount > 0)
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-200 text-rose-900 animate-pulse">
+                                    {{ $expiredVehiclesCount }} Tamat Tempoh
+                                </span>
+                            @endif
+                            @if($expiringVehiclesCount > 0)
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-200 text-amber-900">
+                                    {{ $expiringVehiclesCount }} Hampir Tamat (≤ 30 Hari)
+                                </span>
+                            @endif
+                        </div>
+                        <p class="text-xs {{ $expiredVehiclesCount > 0 ? 'text-rose-700' : 'text-amber-700' }} mt-0.5">
+                            Terdapat {{ $alertVehiclesCount }} kenderaan memerlukan tindakan pembaharuan segera oleh UPF bagi mematuhi peraturan jalan raya.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 self-start md:self-auto text-xs">
+                    <a href="{{ route('vehicles.index', ['alert' => 'all']) }}" class="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-car mr-1"></i> Semak Kenderaan ({{ $alertVehiclesCount }})
+                    </a>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Main Operational Grid: Today's Tasks & Pending Applications -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Left 2 Cols: Jadual Tugasan Hari Ini (Excel Styled Preview) -->
@@ -300,6 +339,42 @@
                     @endforelse
                 </div>
             </div>
+
+            <!-- Peringatan Cukai Jalan & Insurans Kenderaan Widget -->
+            @if($alertVehiclesCount > 0)
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 {{ $expiredVehiclesCount > 0 ? 'bg-rose-50/80 border-b border-rose-200' : 'bg-amber-50/80 border-b border-amber-200' }} flex items-center justify-between">
+                        <h2 class="text-xs font-black uppercase tracking-wider {{ $expiredVehiclesCount > 0 ? 'text-rose-900' : 'text-amber-900' }} flex items-center gap-1.5">
+                            <i class="fa-solid fa-triangle-exclamation {{ $expiredVehiclesCount > 0 ? 'text-rose-600' : 'text-amber-600' }}"></i>
+                            Cukai Jalan & Insurans ({{ $alertVehiclesCount }})
+                        </h2>
+                        <a href="{{ route('vehicles.index', ['alert' => 'all']) }}" class="text-[11px] font-bold text-asm-600 hover:underline">Semua</a>
+                    </div>
+                    <div class="divide-y divide-slate-100">
+                        @foreach($alertVehicles as $v)
+                            <div class="p-3 hover:bg-slate-50 transition space-y-1.5">
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="font-black text-slate-900">{{ $v->plate_number }}</span>
+                                    <span class="text-[11px] text-slate-500 font-medium">{{ $v->brand }} {{ $v->model }}</span>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-1.5 text-[10px]">
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded font-black border {{ $v->roadtax_status['badge_class'] }}">
+                                        Roadtax: {{ $v->roadtax_status['days_text'] }}
+                                    </span>
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded font-black border {{ $v->insurance_status['badge_class'] }}">
+                                        Insurans: {{ $v->insurance_status['days_text'] }}
+                                    </span>
+                                </div>
+                                <div class="text-right pt-0.5">
+                                    <a href="{{ route('vehicles.show', $v->id) }}" class="text-[11px] font-bold text-asm-700 hover:underline">
+                                        Lihat Butiran →
+                                    </a>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
 
             <!-- Isu Kerosakan & Kemalangan Terkini -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

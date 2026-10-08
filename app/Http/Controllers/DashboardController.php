@@ -95,6 +95,12 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        // Vehicles requiring roadtax / insurance attention
+        $alertVehicles = Vehicle::needsAttention()->orderBy('roadtax_expiry')->take(6)->get();
+        $alertVehiclesCount = Vehicle::needsAttention()->count();
+        $expiredVehiclesCount = Vehicle::expiredAlerts()->count();
+        $expiringVehiclesCount = Vehicle::expiringAlerts()->count();
+
         return view('dashboard.upf', compact(
             'todayTasksCount',
             'activeDriversCount',
@@ -105,7 +111,11 @@ class DashboardController extends Controller
             'todayRequests',
             'upcomingRequests',
             'pendingRequests',
-            'activeIncidents'
+            'activeIncidents',
+            'alertVehicles',
+            'alertVehiclesCount',
+            'expiredVehiclesCount',
+            'expiringVehiclesCount'
         ));
     }
 

@@ -29,6 +29,77 @@
         @endif
     </div>
 
+    <!-- Expiry Warning Banner if Roadtax or Insurance Alert Exists -->
+    @if($vehicle->alert_level === 'expired')
+        <div class="p-4 rounded-2xl bg-rose-50 border-2 border-rose-400 text-rose-900 shadow-sm flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 text-lg shadow-sm">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-black text-rose-900 flex items-center gap-2">
+                        <span>AMARAN: DOKUMEN KENDERAAN TELAH TAMAT TEMPOH</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-200 text-rose-900 uppercase">Perlu Tindakan Segera</span>
+                    </h3>
+                    <p class="text-xs text-rose-700 mt-0.5">
+                        Kenderaan ini mempunyai Cukai Jalan atau Insurans yang telah tamat tempoh. Kenderaan tidak sah digunakan di atas jalan raya sehingga pembaharuan rasmi selesai dibuat oleh UPF.
+                    </p>
+                    <div class="mt-2.5 flex flex-wrap gap-2 text-xs font-bold">
+                        @if($vehicle->roadtax_status['is_expired'])
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 border border-rose-300">
+                                <i class="fa-solid fa-file-invoice mr-1.5"></i> Cukai Jalan: {{ $vehicle->roadtax_status['days_text'] }} ({{ $vehicle->roadtax_expiry?->format('d/m/Y') }})
+                            </span>
+                        @endif
+                        @if($vehicle->insurance_status['is_expired'])
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 border border-rose-300">
+                                <i class="fa-solid fa-shield-halved mr-1.5"></i> Insurans: {{ $vehicle->insurance_status['days_text'] }} ({{ $vehicle->insurance_expiry?->format('d/m/Y') }})
+                            </span>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            @if(auth()->user()->isUpf())
+                <a href="{{ route('vehicles.edit', $vehicle->id) }}" class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shrink-0 shadow transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-pen-to-square"></i> Kemaskini Tarikh
+                </a>
+            @endif
+        </div>
+    @elseif($vehicle->alert_level === 'expiring')
+        <div class="p-4 rounded-2xl bg-amber-50 border-2 border-amber-400 text-amber-900 shadow-sm flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500 text-slate-900 flex items-center justify-center shrink-0 text-lg shadow-sm">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-black text-amber-900 flex items-center gap-2">
+                        <span>PERINGATAN: DOKUMEN KENDERAAN HAMPIR TAMAT TEMPOH</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-200 text-amber-900 uppercase">Dalam Tempoh 30 Hari</span>
+                    </h3>
+                    <p class="text-xs text-amber-700 mt-0.5">
+                        Cukai Jalan atau Insurans bagi kenderaan ini akan tamat tidak lama lagi. Sila buat persiapan pembaharuan bersama pembekal insurans/JPJ bagi mengelakkan gangguan tugasan rasmi.
+                    </p>
+                    <div class="mt-2.5 flex flex-wrap gap-2 text-xs font-bold">
+                        @if($vehicle->roadtax_status['is_expiring'])
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300">
+                                <i class="fa-solid fa-file-invoice mr-1.5"></i> Cukai Jalan: {{ $vehicle->roadtax_status['days_text'] }} ({{ $vehicle->roadtax_expiry?->format('d/m/Y') }})
+                            </span>
+                        @endif
+                        @if($vehicle->insurance_status['is_expiring'])
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300">
+                                <i class="fa-solid fa-shield-halved mr-1.5"></i> Insurans: {{ $vehicle->insurance_status['days_text'] }} ({{ $vehicle->insurance_expiry?->format('d/m/Y') }})
+                            </span>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            @if(auth()->user()->isUpf())
+                <a href="{{ route('vehicles.edit', $vehicle->id) }}" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-900 font-black text-xs shrink-0 shadow transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-pen-to-square"></i> Kemaskini Tarikh
+                </a>
+            @endif
+        </div>
+    @endif
+
     <!-- Main Specs & Identity Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Vehicle Plate & Quick Status -->
@@ -96,26 +167,54 @@
                 </div>
             </div>
 
+            <!-- Roadtax, Insurans & Puspakom Status Badges -->
             <div class="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase block">Tamat Cukai Jalan (Roadtax)</span>
-                    <span class="font-bold text-sm text-slate-900 mt-1 block">
-                        {{ $vehicle->roadtax_expiry ? $vehicle->roadtax_expiry->format('d/m/Y') : '-' }}
+                <!-- Roadtax Box -->
+                <div class="p-3.5 rounded-2xl border {{ $vehicle->roadtax_status['status'] === 'expired' ? 'bg-rose-50/70 border-rose-300 ring-1 ring-rose-200' : ($vehicle->roadtax_status['status'] === 'expiring' ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-200' : 'bg-slate-50 border-slate-200') }}">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Cukai Jalan (Roadtax)</span>
+                        <i class="fa-solid fa-file-invoice {{ $vehicle->roadtax_status['text_class'] }}"></i>
+                    </div>
+                    <span class="font-black text-base text-slate-900 mt-1 block">
+                        {{ $vehicle->roadtax_expiry ? $vehicle->roadtax_expiry->format('d/m/Y') : 'Tiada Rekod' }}
                     </span>
+                    <div class="mt-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black border {{ $vehicle->roadtax_status['badge_class'] }}">
+                            {{ $vehicle->roadtax_status['days_text'] }}
+                        </span>
+                    </div>
                 </div>
 
-                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase block">Tamat Tempoh Insurans</span>
-                    <span class="font-bold text-sm text-slate-900 mt-1 block">
-                        {{ $vehicle->insurance_expiry ? $vehicle->insurance_expiry->format('d/m/Y') : '-' }}
+                <!-- Insurance Box -->
+                <div class="p-3.5 rounded-2xl border {{ $vehicle->insurance_status['status'] === 'expired' ? 'bg-rose-50/70 border-rose-300 ring-1 ring-rose-200' : ($vehicle->insurance_status['status'] === 'expiring' ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-200' : 'bg-slate-50 border-slate-200') }}">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Tempoh Sah Insurans</span>
+                        <i class="fa-solid fa-shield-halved {{ $vehicle->insurance_status['text_class'] }}"></i>
+                    </div>
+                    <span class="font-black text-base text-slate-900 mt-1 block">
+                        {{ $vehicle->insurance_expiry ? $vehicle->insurance_expiry->format('d/m/Y') : 'Tiada Rekod' }}
                     </span>
+                    <div class="mt-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black border {{ $vehicle->insurance_status['badge_class'] }}">
+                            {{ $vehicle->insurance_status['days_text'] }}
+                        </span>
+                    </div>
                 </div>
 
-                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase block">Pemeriksaan Puspakom</span>
-                    <span class="font-bold text-sm text-slate-900 mt-1 block">
+                <!-- Puspakom Box -->
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Pemeriksaan Puspakom</span>
+                        <i class="fa-solid fa-truck-ramp-box text-slate-400"></i>
+                    </div>
+                    <span class="font-black text-base text-slate-900 mt-1 block">
                         {{ $vehicle->puspakom_expiry ? $vehicle->puspakom_expiry->format('d/m/Y') : 'Tidak Berkenaan' }}
                     </span>
+                    <div class="mt-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-600 border border-slate-200">
+                            {{ $vehicle->puspakom_expiry ? 'Sah JPJ' : 'Dikecualikan' }}
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
