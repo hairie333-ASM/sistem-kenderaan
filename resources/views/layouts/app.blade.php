@@ -89,25 +89,41 @@
 
     <!-- Main Header Bar -->
     <header class="no-print bg-asm-950 text-white sticky top-0 z-40 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between min-h-16 py-2 sm:py-0 sm:h-16">
                 <!-- Brand / Logo -->
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-2 sm:space-x-3 min-w-0">
                     <!-- Hamburger Button (Mobile) -->
-                    <button type="button" @click="mobileMenuOpen = true" class="md:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-asm-900 focus:outline-none" aria-label="Buka Menu">
+                    <button type="button" @click="mobileMenuOpen = true" class="md:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-asm-900 focus:outline-none shrink-0" aria-label="Buka Menu">
                         <i class="fa-solid fa-bars text-xl"></i>
                     </button>
 
-                    <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 group">
-                        <div class="w-11 h-11 rounded-xl bg-white flex items-center justify-center p-1.5 shadow-md border border-slate-200 flex-shrink-0">
-                            <img src="{{ asset('images/asm-logo-official.png') }}" alt="ASM" class="h-8 w-auto object-contain block" onerror="this.src='{{ asset('images/asm-logo.png') }}'">
+                    <a href="{{ route('dashboard') }}" class="flex items-center space-x-2 sm:space-x-3 group min-w-0">
+                        <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white flex items-center justify-center p-1 sm:p-1.5 shadow-md border border-slate-200 shrink-0">
+                            <img src="{{ asset('images/asm-logo-official.png') }}" alt="ASM" class="h-7 sm:h-8 w-auto object-contain block" onerror="this.src='{{ asset('images/asm-logo.png') }}'">
                         </div>
-                        <div>
-                            <div class="text-xs sm:text-sm font-extrabold tracking-wide uppercase text-white flex items-center gap-1.5">
-                                SISTEM PENGURUSAN KENDERAAN & PEMANDU
-                                <span class="bg-amber-400 text-slate-950 text-[10px] font-black px-1.5 py-0.2 rounded">UPF</span>
+                        <div class="min-w-0">
+                            <!-- Mobile Title (< sm) -->
+                            <div class="sm:hidden leading-tight">
+                                <div class="text-xs font-black tracking-tight uppercase text-white flex items-center gap-1.5">
+                                    <span class="truncate">SISTEM KENDERAAN</span>
+                                    <span class="bg-amber-400 text-slate-950 text-[9px] font-black px-1.5 py-0.5 rounded shrink-0">UPF</span>
+                                </div>
+                                <div class="text-[9px] text-slate-300 tracking-wider truncate">
+                                    AKADEMI SAINS MALAYSIA
+                                </div>
                             </div>
-                            <div class="text-[10px] sm:text-[11px] text-slate-300 tracking-wider">UNIT PENGURUSAN FASILITI • AKADEMI SAINS MALAYSIA</div>
+
+                            <!-- Tablet & Desktop Title (>= sm) -->
+                            <div class="hidden sm:block leading-tight">
+                                <div class="text-xs sm:text-sm font-extrabold tracking-wide uppercase text-white flex items-center gap-1.5">
+                                    <span>SISTEM PENGURUSAN KENDERAAN & PEMANDU</span>
+                                    <span class="bg-amber-400 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded shrink-0">UPF</span>
+                                </div>
+                                <div class="text-[10px] sm:text-[11px] text-slate-300 tracking-wider truncate">
+                                    UNIT PENGURUSAN FASILITI • AKADEMI SAINS MALAYSIA
+                                </div>
+                            </div>
                         </div>
                     </a>
                 </div>
@@ -669,7 +685,7 @@
     </div>
 
     <!-- Main Content Area (Spacious Full Width without Cramped Sidebar) -->
-    <main class="flex-1 overflow-y-auto bg-slate-50 p-3 sm:p-6 lg:p-8 pb-24 md:pb-10">
+    <main class="flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6 lg:p-8 pb-24 md:pb-10">
         <div class="max-w-7xl mx-auto">
             <!-- Flash Alerts -->
             @if(session('success'))
