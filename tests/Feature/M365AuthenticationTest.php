@@ -23,29 +23,21 @@ class M365AuthenticationTest extends TestCase
         $response->assertSee('@akademisains.gov.my');
     }
 
-    public function test_m365_redirect_to_microsoft_oauth_when_client_id_configured(): void
+    public function test_m365_redirect_always_goes_directly_to_microsoft_oauth(): void
     {
-        Config::set('services.m365.client_id', 'azure-mock-client-id-12345');
-        Config::set('services.m365.tenant_id', 'asm-tenant-id');
+        Config::set('services.m365.client_id', 'azure-asm-client-id');
+        Config::set('services.m365.tenant_id', 'common');
 
         $response = $this->get(route('auth.m365.redirect'));
 
         $response->assertRedirect();
         $targetUrl = $response->headers->get('Location');
 
-        $this->assertStringContainsString('login.microsoftonline.com/asm-tenant-id/oauth2/v2.0/authorize', $targetUrl);
-        $this->assertStringContainsString('client_id=azure-mock-client-id-12345', $targetUrl);
+        $this->assertStringContainsString('login.microsoftonline.com/common/oauth2/v2.0/authorize', $targetUrl);
+        $this->assertStringContainsString('client_id=azure-asm-client-id', $targetUrl);
         $this->assertStringContainsString('response_type=code', $targetUrl);
+        $this->assertStringContainsString('scope=openid+profile+email+User.Read', $targetUrl);
         $this->assertNotNull(session('m365_oauth_state'));
-    }
-
-    public function test_m365_redirect_to_mock_simulator_in_dev_when_client_id_empty(): void
-    {
-        Config::set('services.m365.client_id', null);
-
-        $response = $this->get(route('auth.m365.redirect'));
-
-        $response->assertRedirect(route('auth.m365.mock'));
     }
 
     public function test_m365_callback_successful_for_existing_user(): void
@@ -97,18 +89,37 @@ class M365AuthenticationTest extends TestCase
         $this->assertSame('m365-azure-guid-001', $user->m365_id);
     }
 
-    public function test_m365_auto_provisions_new_applicant_for_akademisains_domain(): void
+    public function test_m365_callback_auto_provisions_new_applicant_for_akademisains_domain(): void
     {
+        Config::set('services.m365.client_id', 'test-client-id');
+        Config::set('services.m365.client_secret', 'test-client-secret');
+        Config::set('services.m365.tenant_id', 'common');
+
         $newEmail = 'dr.salmah@akademisains.gov.my';
         $this->assertDatabaseMissing('users', ['email' => $newEmail]);
 
-        $response = $this->post(route('auth.m365.mock.submit'), [
-            'email' => $newEmail,
-            'displayName' => 'Dr. Salmah Binti Hashim',
-            'department' => 'Bahagian Inovasi',
-            'jobTitle' => 'Pengarah Bersekutu',
-            'mobilePhone' => '019-8765432',
+        Http::fake([
+            'https://login.microsoftonline.com/common/oauth2/v2.0/token' => Http::response([
+                'access_token' => 'mock-access-token-new-user',
+            ], 200),
+            'https://graph.microsoft.com/v1.0/me*' => Http::response([
+                'id' => 'm365-guid-salmah',
+                'displayName' => 'Dr. Salmah Binti Hashim',
+                'mail' => $newEmail,
+                'userPrincipalName' => $newEmail,
+                'department' => 'Bahagian Inovasi',
+                'jobTitle' => 'Pengarah Bersekutu',
+                'mobilePhone' => '019-8765432',
+            ], 200),
         ]);
+
+        $state = 'test-state-salmah';
+        session(['m365_oauth_state' => $state]);
+
+        $response = $this->get(route('auth.m365.callback', [
+            'code' => 'auth-code-salmah',
+            'state' => $state,
+        ]));
 
         $response->assertRedirect(route('dashboard'));
         $this->assertTrue(Auth::check());
@@ -126,14 +137,33 @@ class M365AuthenticationTest extends TestCase
         $this->assertSame('pemohon', $currentUser->role);
     }
 
-    public function test_m365_rejects_non_akademisains_email_domain(): void
+    public function test_m365_callback_rejects_non_akademisains_email_domain(): void
     {
+        Config::set('services.m365.client_id', 'test-client-id');
+        Config::set('services.m365.client_secret', 'test-client-secret');
+        Config::set('services.m365.tenant_id', 'common');
+
         $unauthorizedEmail = 'pemohon.luar@gmail.com';
 
-        $response = $this->post(route('auth.m365.mock.submit'), [
-            'email' => $unauthorizedEmail,
-            'displayName' => 'Penceroboh Luar',
+        Http::fake([
+            'https://login.microsoftonline.com/common/oauth2/v2.0/token' => Http::response([
+                'access_token' => 'mock-access-token-gmail',
+            ], 200),
+            'https://graph.microsoft.com/v1.0/me*' => Http::response([
+                'id' => 'm365-guid-gmail',
+                'displayName' => 'Penceroboh Luar',
+                'mail' => $unauthorizedEmail,
+                'userPrincipalName' => $unauthorizedEmail,
+            ], 200),
         ]);
+
+        $state = 'test-state-reject';
+        session(['m365_oauth_state' => $state]);
+
+        $response = $this->get(route('auth.m365.callback', [
+            'code' => 'auth-code-reject',
+            'state' => $state,
+        ]));
 
         $response->assertRedirect(route('login'));
         $response->assertSessionHasErrors(['email']);
@@ -141,8 +171,12 @@ class M365AuthenticationTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => $unauthorizedEmail]);
     }
 
-    public function test_m365_rejects_inactive_user(): void
+    public function test_m365_callback_rejects_inactive_user(): void
     {
+        Config::set('services.m365.client_id', 'test-client-id');
+        Config::set('services.m365.client_secret', 'test-client-secret');
+        Config::set('services.m365.tenant_id', 'common');
+
         $inactiveEmail = 'staf.dinyahaktif@akademisains.gov.my';
         User::create([
             'name' => 'Staf Tidak Aktif',
@@ -152,10 +186,38 @@ class M365AuthenticationTest extends TestCase
             'is_active' => false,
         ]);
 
-        $response = $this->post(route('auth.m365.mock.submit'), [
-            'email' => $inactiveEmail,
-            'displayName' => 'Staf Tidak Aktif',
+        Http::fake([
+            'https://login.microsoftonline.com/common/oauth2/v2.0/token' => Http::response([
+                'access_token' => 'mock-access-token-inactive',
+            ], 200),
+            'https://graph.microsoft.com/v1.0/me*' => Http::response([
+                'id' => 'm365-guid-inactive',
+                'displayName' => 'Staf Tidak Aktif',
+                'mail' => $inactiveEmail,
+            ], 200),
         ]);
+
+        $state = 'test-state-inactive';
+        session(['m365_oauth_state' => $state]);
+
+        $response = $this->get(route('auth.m365.callback', [
+            'code' => 'auth-code-inactive',
+            'state' => $state,
+        ]));
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors(['email']);
+        $this->assertFalse(Auth::check());
+    }
+
+    public function test_m365_callback_rejects_invalid_state(): void
+    {
+        session(['m365_oauth_state' => 'valid-state-123']);
+
+        $response = $this->get(route('auth.m365.callback', [
+            'code' => 'any-code',
+            'state' => 'tampered-state-999',
+        ]));
 
         $response->assertRedirect(route('login'));
         $response->assertSessionHasErrors(['email']);

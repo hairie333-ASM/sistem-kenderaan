@@ -10,12 +10,11 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-use Illuminate\View\View;
 
 class M365AuthController extends Controller
 {
     /**
-     * Redirect user to Microsoft 365 OAuth 2.0 endpoint or local mock simulator.
+     * Redirect user directly to Microsoft 365 OAuth 2.0 endpoint.
      */
     public function redirect(Request $request): RedirectResponse
     {
@@ -23,22 +22,11 @@ class M365AuthController extends Controller
         $tenantId = config('services.m365.tenant_id', 'common');
         $redirectUri = config('services.m365.redirect_uri') ?: route('auth.m365.callback');
 
-        // If credentials are not yet configured in local/test environment, redirect to dev simulator
-        if (empty($clientId)) {
-            if (app()->environment('local', 'testing')) {
-                return redirect()->route('auth.m365.mock')->with('info', 'Mod Simulasi Pembangunan M365: Kunci Azure Client ID belum ditetapkan dalam fail .env.');
-            }
-
-            return redirect()->route('login')->withErrors([
-                'email' => 'Konfigurasi Microsoft 365 SSO belum dilengkapkan oleh pentadbir sistem.',
-            ]);
-        }
-
         $state = Str::random(40);
         $request->session()->put('m365_oauth_state', $state);
 
         $params = http_build_query([
-            'client_id' => $clientId,
+            'client_id' => (string) $clientId,
             'response_type' => 'code',
             'redirect_uri' => $redirectUri,
             'response_mode' => 'query',
@@ -117,50 +105,6 @@ class M365AuthController extends Controller
         $profile = $graphResponse->json();
 
         return $this->handleM365Profile($request, $profile);
-    }
-
-    /**
-     * Show mock simulation page for local development and testing.
-     */
-    public function mockForm(): View|RedirectResponse
-    {
-        if (! app()->environment('local', 'testing') && ! empty(config('services.m365.client_id'))) {
-            return redirect()->route('auth.m365.redirect');
-        }
-
-        $existingUsers = User::where('email', 'like', '%@akademisains.gov.my')->get();
-
-        return view('auth.m365_mock', compact('existingUsers'));
-    }
-
-    /**
-     * Process mock simulation submission.
-     */
-    public function mockSubmit(Request $request): RedirectResponse
-    {
-        if (! app()->environment('local', 'testing') && ! empty(config('services.m365.client_id'))) {
-            abort(403, 'Aksi ini hanya dibenarkan dalam persekitaran pembangunan.');
-        }
-
-        $validated = $request->validate([
-            'email' => ['required', 'string'],
-            'displayName' => ['required', 'string', 'max:255'],
-            'department' => ['nullable', 'string', 'max:255'],
-            'jobTitle' => ['nullable', 'string', 'max:255'],
-            'mobilePhone' => ['nullable', 'string', 'max:50'],
-        ]);
-
-        $mockProfile = [
-            'id' => 'm365-mock-'.md5(strtolower(trim($validated['email']))),
-            'displayName' => $validated['displayName'],
-            'mail' => $validated['email'],
-            'userPrincipalName' => $validated['email'],
-            'department' => $validated['department'] ?? 'Akademi Sains Malaysia',
-            'jobTitle' => $validated['jobTitle'] ?? 'Pegawai',
-            'mobilePhone' => $validated['mobilePhone'] ?? '03-8365 0000',
-        ];
-
-        return $this->handleM365Profile($request, $mockProfile);
     }
 
     /**
