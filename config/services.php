@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'm365' => [
+        'client_id' => env('M365_CLIENT_ID'),
+        'client_secret' => env('M365_CLIENT_SECRET'),
+        'tenant_id' => env('M365_TENANT_ID', 'common'),
+        'redirect_uri' => env('M365_REDIRECT_URI'),
+        'allowed_domain' => env('M365_ALLOWED_DOMAIN', 'akademisains.gov.my'),
+    ],
+
 ];

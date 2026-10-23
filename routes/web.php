@@ -8,6 +8,7 @@ use App\Http\Controllers\DriverTaskController;
 use App\Http\Controllers\FuelLogController;
 use App\Http\Controllers\HandoverController;
 use App\Http\Controllers\IncidentController;
+use App\Http\Controllers\M365AuthController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScheduleController;
@@ -71,6 +72,12 @@ Route::get('/status', function () {
 // Guest Authentication
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+
+// Microsoft 365 Single Sign-On (SSO) for ASM Staff / Pemohon
+Route::get('/auth/m365/redirect', [M365AuthController::class, 'redirect'])->name('auth.m365.redirect');
+Route::get('/auth/m365/callback', [M365AuthController::class, 'callback'])->name('auth.m365.callback');
+Route::get('/auth/m365/mock', [M365AuthController::class, 'mockForm'])->name('auth.m365.mock');
+Route::post('/auth/m365/mock', [M365AuthController::class, 'mockSubmit'])->name('auth.m365.mock.submit');
 
 // Fast 1-Click Role Switcher for instant testing
 Route::get('/switch-user/{id}', [AuthController::class, 'switchUser'])->name('switch.user');

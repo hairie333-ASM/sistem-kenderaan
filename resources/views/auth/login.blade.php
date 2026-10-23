@@ -71,6 +71,31 @@
                 </div>
             @endif
 
+            <!-- Microsoft 365 SSO for Applicants / Staff -->
+            <div class="mb-5">
+                <a href="{{ route('auth.m365.redirect') }}" class="w-full py-3 px-4 rounded-xl bg-white hover:bg-slate-50 border-2 border-slate-300 hover:border-slate-400 text-slate-800 font-bold text-sm shadow-sm hover:shadow transition flex items-center justify-center space-x-3 group ring-2 ring-indigo-500/10">
+                    <!-- Microsoft 4-Color Grid Logo -->
+                    <div class="grid grid-cols-2 gap-0.5 w-5 h-5 flex-shrink-0">
+                        <div class="bg-[#f25022] rounded-sm"></div>
+                        <div class="bg-[#7fba00] rounded-sm"></div>
+                        <div class="bg-[#00a4ef] rounded-sm"></div>
+                        <div class="bg-[#ffb900] rounded-sm"></div>
+                    </div>
+                    <span class="text-slate-800 group-hover:text-slate-900">Log Masuk dengan Microsoft 365</span>
+                </a>
+                <div class="text-[11px] text-center text-slate-500 mt-2 flex items-center justify-center space-x-1.5">
+                    <i class="fa-solid fa-building-columns text-[10px] text-indigo-600"></i>
+                    <span>Khusus untuk Pemohon & Staf <strong>@akademisains.gov.my</strong></span>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="relative flex py-2 items-center mb-4">
+                <div class="flex-grow border-t border-slate-200"></div>
+                <span class="flex-shrink mx-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">atau log masuk manual</span>
+                <div class="flex-grow border-t border-slate-200"></div>
+            </div>
+
             <form method="POST" action="{{ route('login.post') }}" class="space-y-4">
                 @csrf
                 <div>
